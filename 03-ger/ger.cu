@@ -29,8 +29,8 @@ void ger_cpu(int m, int n, float alpha, const float* x, const float* y, float* A
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Maximum elementwise relative error
-double max_relative_error(int size,
+// compute error norm
+double compute_error_norm(int size,
                           const float* result,
                           const float* reference)
 {
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
     cudaMemcpy(h_cublas.data(), d_A, matrix_bytes, cudaMemcpyDeviceToHost);
 
     // --------------------------------------------------------
-    // Performance and maximum relative error
+    // Performance and error norm
     // Approximately 2 FLOPs per matrix element.
     // --------------------------------------------------------
     const double flops = 2.0 * m * n;
@@ -182,12 +182,12 @@ int main(int argc, char** argv)
     const double custom_gflops = flops / (custom_us * 1.0e3);
     const double cublas_gflops = flops / (cublas_us * 1.0e3);
 
-    const double custom_error = max_relative_error( (int)matrix_size, h_custom.data(), h_ref.data());
-    const double cublas_error = max_relative_error( (int)matrix_size, h_cublas.data(), h_ref.data());
+    const double custom_error = compute_error_norm( (int)matrix_size, h_custom.data(), h_ref.data());
+    const double cublas_error = compute_error_norm( (int)matrix_size, h_cublas.data(), h_ref.data());
 
     std::printf("%-20s %12s %12s %20s\n",
                 "Implementation", "Time (us)", "GFLOP/s",
-                "Max relative error");
+                "Error Norm");
     std::printf("--------------------------------------------------------------------\n");
 
     std::printf("%-20s %12.3f %12.3f %20.6e\n",
