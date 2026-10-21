@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <cuda.h>
 #include <cuda_runtime.h>
 
 // CUDA kernel
@@ -28,13 +29,22 @@ void print_gpu_info()
         return;
     }
 
+    int clk_khz, memclk_khz;
+    #if CUDART_VERSION >= 12000
+    cudaDeviceGetAttribute( &clk_khz,    cudaDevAttrClockRate, device );
+    cudaDeviceGetAttribute( &memclk_khz, cudaDevAttrMemoryClockRate, device );
+    #else
+    clk_khz    = prop.clockRate;
+    memclk_khz = prop.memoryClockRate;
+    #endif
+
     printf("GPU Information\n");
     printf("------------------------------\n");
     printf("Device name              : %s\n",       prop.name);
     printf("Compute capability       : %d.%d\n",    prop.major, prop.minor);
     printf("Number of SMs            : %d\n",       prop.multiProcessorCount);
-    printf("GPU clock rate           : %.2f MHz\n", prop.clockRate / 1000.0);
-    printf("Memory clock rate        : %.2f MHz\n", prop.memoryClockRate / 1000.0);
+    printf("GPU clock rate           : %.2f MHz\n", clk_khz / 1000.0);
+    printf("Memory clock rate        : %.2f MHz\n", memclk_khz / 1000.0);
     printf("L2 cache size            : %.2f MB\n",  prop.l2CacheSize / (1024.0 * 1024.0));
     printf("Shared memory per block  : %.2f KB\n",  prop.sharedMemPerBlock / 1024.0);
     printf("Shared memory per SM     : %.2f KB\n",  prop.sharedMemPerMultiprocessor / 1024.0);
