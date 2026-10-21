@@ -166,10 +166,6 @@ int main(int argc, char** argv)
     std::printf("GPU: %s (compute capability %d.%d)\n",
                 prop.name, prop.major, prop.minor);
 
-    std::printf("SMs: %d, GPU clock: %.2f MHz, L2: %.2f MB\n",
-                prop.multiProcessorCount, prop.clockRate / 1000.0,
-                prop.l2CacheSize / (1024.0 * 1024.0));
-
     std::printf("Matrix size: %d x %d, batch size: %d\n",
                 n, n, batch_size);
 
