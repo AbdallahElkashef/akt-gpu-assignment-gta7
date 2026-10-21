@@ -2,12 +2,15 @@
 CUDADIR ?= /usr/local/cuda
 
 # gpu architecture
-arch=70
+# Ampere by default, with forward compatibility
+sm=80
+GENCODE_SM   = -gencode arch=compute_$(sm),code=sm_$(sm)
+GENCODE_COMP = -gencode arch=compute_$(sm),code=compute_$(sm)
 
 LIB=-L${CUDADIR}/lib64 -lcublas
 
 all:
-	nvcc -arch=sm_${arch} dot.cu -o dot ${LIB}
+	nvcc ${GENCODE_SM} ${GENCODE_COMP} dot.cu -o dot ${LIB}
 
 clean:
 	rm -rf dot
