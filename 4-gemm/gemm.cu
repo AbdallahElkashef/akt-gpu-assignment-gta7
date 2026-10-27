@@ -148,11 +148,18 @@ int main(int argc, char** argv)
     // Allocate GPU memory
     // --------------------------------------------------------
     // TODO: write your allocations here
+    float *d_a, *d_b, *d_custom, *d_cublas;
+    cudaMalloc(&d_a, bytes);
+    cudaMalloc(&d_b, bytes);
+    cudaMalloc(&d_custom, bytes);
+    cudaMalloc(&d_cublas, bytes);
 
     // --------------------------------------------------------
     // Copy A and B to GPU
     // --------------------------------------------------------
     // TODO: write your mem-copies here
+    cudaMemcpy(d_a, h_A.data(), bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_B.data(), bytes, cudaMemcpyHostToDevice);
 
     // --------------------------------------------------------
     // GPU information
@@ -205,6 +212,7 @@ int main(int argc, char** argv)
 
 
     // TODO: copy the output matrices to CPU in 'h_custom'
+    cudaMemcpy(h_custom.data(), d_custom, bytes, cudaMemcpyDeviceToHost);
 
     // --------------------------------------------------------
     // cuBLAS strided batched GEMM
@@ -231,6 +239,7 @@ int main(int argc, char** argv)
     const double cublas_us = cublas_ms * 1000.0 / repeats;
 
     // TODO: copy the output matrices to CPU in 'h_cublas'
+    cudaMemcpy(h_cublas.data(), d_cublas, bytes, cudaMemcpyDeviceToHost);
 
     // --------------------------------------------------------
     // Performance and forward error
@@ -286,6 +295,11 @@ int main(int argc, char** argv)
     // TODO: Destroy any cuBLAS handles you created
 
     // TODO: free any GPU memory you allocated
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_custom);
+    cudaFree(d_cublas);
+
 
     return 0;
 }
