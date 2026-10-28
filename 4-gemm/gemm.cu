@@ -1,4 +1,3 @@
-
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
@@ -19,8 +18,27 @@ __global__ void batch_gemm_kernel(int n, int batch_size,
                                     const float* A,
                                     const float* B,
                                     float* C)
+ // TODO: write your own kernel here
 {
-    // TODO: write your own kernel here
+    int row = threadIdx.x;
+    int col = threadIdx.y;
+    int b = blockIdx.z;
+
+    if( b < batch_size && row < n && col < n )
+       {
+           size_t base = (size_t)b * n * n;
+           float sum = 0.0f;  
+
+           for(int k = 0; k < n ; ++k)
+              {
+                 sum += A[base + (size_t)k * n + row] * B[base + (size_t)col * n + k];
+                        
+              }
+           
+           C[base + (size_t)col * n + row] = sum;
+       }
+    
+   
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -148,18 +166,18 @@ int main(int argc, char** argv)
     // Allocate GPU memory
     // --------------------------------------------------------
     // TODO: write your allocations here
-    float *d_a, *d_b, *d_custom, *d_cublas;
-    cudaMalloc(&d_a, bytes);
-    cudaMalloc(&d_b, bytes);
-    cudaMalloc(&d_custom, bytes);
-    cudaMalloc(&d_cublas, bytes);
+    float *d_A, *d_B, *d_custom_C, *d_cublas_C;
+    cudaMalloc(&d_A, bytes);
+    cudaMalloc(&d_B, bytes);
+    cudaMalloc(&d_custom_C, bytes);
+    cudaMalloc(&d_cublas_C, bytes);
 
     // --------------------------------------------------------
     // Copy A and B to GPU
     // --------------------------------------------------------
     // TODO: write your mem-copies here
-    cudaMemcpy(d_a, h_A.data(), bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, h_B.data(), bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_A, h_A.data(), bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B.data(), bytes, cudaMemcpyHostToDevice);
 
     // --------------------------------------------------------
     // GPU information
@@ -188,19 +206,24 @@ int main(int argc, char** argv)
     // Custom kernel configuration
     // --------------------------------------------------------
     // TODO: configure your kernel here
-
+       
+      dim3 block(n,n);
+      dim3 grid(1,1,batch_size);
 
     // --------------------------------------------------------
     // Warmup run
     // --------------------------------------------------------
     // TODO: run your kernel once (warmup - not timed)
-
+      
+    batch_gemm_kernel<<<grid, block>>>(n, batch_size, d_A, d_B, d_custom_C); 
+    
     cudaDeviceSynchronize();
 
     // TODO: start your timing here using CUDA events
 
     for (int r = 0; r < repeats; ++r) {
         // TODO: run your kernel here
+        batch_gemm_kernel<<<grid , block>>>(n, batch_size , d_A , d_B , d_custom_C);
     }
 
     // TODO: end your timing here using CUDA events
@@ -212,7 +235,7 @@ int main(int argc, char** argv)
 
 
     // TODO: copy the output matrices to CPU in 'h_custom'
-    cudaMemcpy(h_custom.data(), d_custom, bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_custom.data(), d_custom_C, bytes, cudaMemcpyDeviceToHost);
 
     // --------------------------------------------------------
     // cuBLAS strided batched GEMM
@@ -239,7 +262,7 @@ int main(int argc, char** argv)
     const double cublas_us = cublas_ms * 1000.0 / repeats;
 
     // TODO: copy the output matrices to CPU in 'h_cublas'
-    cudaMemcpy(h_cublas.data(), d_cublas, bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_cublas.data(), d_cublas_C, bytes, cudaMemcpyDeviceToHost);
 
     // --------------------------------------------------------
     // Performance and forward error
@@ -295,10 +318,10 @@ int main(int argc, char** argv)
     // TODO: Destroy any cuBLAS handles you created
 
     // TODO: free any GPU memory you allocated
-    cudaFree(d_a);
-    cudaFree(d_b);
-    cudaFree(d_custom);
-    cudaFree(d_cublas);
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_custom_C);
+    cudaFree(d_cublas_C);
 
 
     return 0;
