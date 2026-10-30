@@ -14,7 +14,17 @@
 // Column-major storage: A(i,j) = A[j*m + i]
 __global__ void ger_kernel(int m, int n, float alpha, const float* x, const float* y, float* A)
 {
-    // TODO: write your CUDA kernel here
+    // one thread per matrix element A(i,j)
+    // x-dimension -> row i, y-dimension -> column j.
+    // Neighbouring threads of a warp get neighbouring rows of the same column,
+    // which are neighbours in memory (column-major), so the access is coalesced.
+    const int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // the grid is rounded up, so some threads fall outside the matrix
+    if (i < m && j < n) {
+        A[(size_t)j * m + i] += alpha * x[i] * y[j];
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,10 +116,11 @@ int main(int argc, char** argv)
     std::printf("Matrix storage: column-major\n\n");
 
     // n1000: configure your kernel here
-    // TODO: the configuration below is a default that you must change
-    dim3 block(16, 16, 1);
-    dim3 grid( 1, 1, 1);
-    // end of TODO: kernel configuration
+    // 32 x 8 = 256 threads per block: 32 rows (one full warp) x 8 columns.
+    // Enough blocks to cover all m rows and n columns (ceiling division).
+    dim3 block(32, 8, 1);
+    dim3 grid( (m + block.x - 1) / block.x, (n + block.y - 1) / block.y, 1);
+    // end of kernel configuration
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
