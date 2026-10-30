@@ -201,12 +201,14 @@ int main(int argc, char** argv)
     // CUDA events
     // --------------------------------------------------------
     // TODO: create CUDA events for timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
     // --------------------------------------------------------
     // Custom kernel configuration
     // --------------------------------------------------------
     // TODO: configure your kernel here
-       
       dim3 block(n,n);
       dim3 grid(1,1,batch_size);
 
@@ -214,12 +216,12 @@ int main(int argc, char** argv)
     // Warmup run
     // --------------------------------------------------------
     // TODO: run your kernel once (warmup - not timed)
-      
     batch_gemm_kernel<<<grid, block>>>(n, batch_size, d_A, d_B, d_custom); 
     
     cudaDeviceSynchronize();
 
     // TODO: start your timing here using CUDA events
+    cudaEventRecord(start);
 
     for (int r = 0; r < repeats; ++r) {
         // TODO: run your kernel here
@@ -227,9 +229,12 @@ int main(int argc, char** argv)
     }
 
     // TODO: end your timing here using CUDA events
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
     float custom_ms = 0.0f;
     // TODO: calculate the time of your kernel using 'cudaEventElapsedTime'
+    cudaEventElapsedTime(&custom_ms, start, stop);
 
     const double custom_us = custom_ms * 1000.0 / repeats;
 
@@ -242,22 +247,32 @@ int main(int argc, char** argv)
     // --------------------------------------------------------
 
     // TODO: create a cuBLAS handle
+    cublasHandle_t handle;
+    cublasCreate(&handle);
 
     // TODO: warmup run for 'cublasSgemmStridedBatched'
     // TODO: note that the leading dimension for all matrices is 'n'
+    float alpha = 1.0f, beta = 0.0f;
+    cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, d_A, n, n*n, d_B, n, n*n, &beta, d_cublas, n, n*n, batch_size);
 
     cudaDeviceSynchronize();
 
     // TODO: start timing using CUDA events
+    cudaEventRecord(start);
+
     for (int r = 0; r < repeats; ++r) {
 
         // TODO: call 'cublasSgemmStridedBatched'
+        cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, d_A, n, n*n, d_B, n, n*n, &beta, d_cublas, n, n*n, batch_size);
     }
 
     // TODO: end timing using CUDA events
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
     float cublas_ms = 0.0f;
     // TODO: calculate the time of 'cublasSgemmStridedBatched' using 'cudaEventElapsedTime'
+    cudaEventElapsedTime(&cublas_ms, start, stop);
 
     const double cublas_us = cublas_ms * 1000.0 / repeats;
 
@@ -314,8 +329,11 @@ int main(int argc, char** argv)
     // Cleanup
     // --------------------------------------------------------
     // TODO: Destroy any CUDA events you created
-
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    
     // TODO: Destroy any cuBLAS handles you created
+    cublasDestroy(handle);
 
     // TODO: free any GPU memory you allocated
     cudaFree(d_A);
